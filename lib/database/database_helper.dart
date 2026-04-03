@@ -2,63 +2,136 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
 class DatabaseHelper {
-
-  // Nombre de la base de datos
-  static final _databaseName = "produccion.db";
-
-  // Versión de la base de datos
-  static final _databaseVersion = 1;
-
-  // Nombre de la tabla
-  static final table = 'produccion';
-
-  // Columna
-  static final columnId = 'id';
-  static final columnLitros = 'litros';
-
-  // Singleton (una sola instancia de la BD)
-  DatabaseHelper._privateConstructor();
-  static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
-
+  static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
 
-  // Obtener la base de datos (si no existe, la crea)
+  DatabaseHelper._init();
+
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDatabase();
+    _database = await _initDB('regressly.db');
     return _database!;
   }
 
-  // Inicializar la base de datos
-  _initDatabase() async {
-    String path = join(await getDatabasesPath(), _databaseName);
+  Future<Database> _initDB(String filePath) async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, filePath);
 
     return await openDatabase(
       path,
-      version: _databaseVersion,
-      onCreate: _onCreate,
+      version: 2, // CAMBIADO: version 2 para crear nueva tabla
+      onCreate: _createDB,
+      onUpgrade: _onUpgrade, // NUEVO: para actualizar BD existente
     );
   }
 
-  // Crear la tabla
-  Future _onCreate(Database db, int version) async {
+  Future<void> _createDB(Database db, int version) async {
+    // Tabla de registros
     await db.execute('''
-      CREATE TABLE $table (
-        $columnId INTEGER PRIMARY KEY AUTOINCREMENT,
-        $columnLitros REAL NOT NULL
+      CREATE TABLE registros(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        fecha TEXT UNIQUE,
+        litros_manana REAL,
+        litros_tarde REAL,
+        litros_total REAL,
+        observaciones TEXT,
+        created_at TEXT
+      )
+    ''');
+
+    // NUEVA: Tabla de finca/configuración
+    await db.execute('''
+      CREATE TABLE finca(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre_productor TEXT,
+        nombre_finca TEXT,
+        ubicacion TEXT,
+        numero_vacas INTEGER,
+        precio_litro REAL
       )
     ''');
   }
 
-  // Insertar datos
-  Future<int> insert(Map<String, dynamic> row) async {
-    Database db = await instance.database;
-    return await db.insert(table, row);
+  // NUEVO: Para actualizar BD existente sin perder datos
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE finca(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nombre_productor TEXT,
+          nombre_finca TEXT,
+          ubicacion TEXT,
+          numero_vacas INTEGER,
+          precio_litro REAL
+        )
+      ''');
+    }
   }
 
-  // Obtener todos los datos
-  Future<List<Map<String, dynamic>>> queryAll() async {
-    Database db = await instance.database;
-    return await db.query(table);
+  // ========== MÉTODOS PARA REGISTROS ==========
+  Future<int> insertRegistro(Map<String, dynamic> registro) async {
+    final db = await database;
+    return await db.insert('registros', registro);
+  }
+
+  Future<List<Map<String, dynamic>>> queryAllRegistros() async {
+    final db = await database;
+    return await db.query(
+      'registros',
+      orderBy: 'fecha DESC',
+    );
+  }
+
+  Future<Map<String, dynamic>?> getRegistroPorFecha(String fecha) async {
+    final db = await database;
+    final result = await db.query(
+      'registros',
+      where: 'fecha = ?',
+      whereArgs: [fecha],
+    );
+    if (result.isNotEmpty) {
+      return result.first;
+    }
+    return null;
+  }
+
+  Future<int> updateRegistro(Map<String, dynamic> registro) async {
+    final db = await database;
+    return await db.update(
+      'registros',
+      registro,
+      where: 'id = ?',
+      whereArgs: [registro['id']],
+    );
+  }
+
+  Future<int> deleteRegistro(int id) async {
+    final db = await database;
+    return await db.delete(
+      'registros',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // ========== NUEVOS MÉTODOS PARA FINCA ==========
+  Future<Map<String, dynamic>?> getFinca() async {
+    final db = await database;
+    final result = await db.query('finca');
+    if (result.isNotEmpty) {
+      return result.first;
+    }
+    return null;
+  }
+
+  Future<void> insertOrUpdateFinca(Map<String, dynamic> fincaData) async {
+    final db = await database;
+    final existing = await db.query('finca');
+
+    if (existing.isEmpty) {
+      await db.insert('finca', fincaData);
+    } else {
+      await db.update('finca', fincaData, where: 'id = ?', whereArgs: [existing.first['id']]);
+    }
   }
 }

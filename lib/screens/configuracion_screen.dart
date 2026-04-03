@@ -1,0 +1,196 @@
+import 'package:flutter/material.dart';
+import 'package:regressly/database/database_helper.dart';
+
+class ConfiguracionScreen extends StatefulWidget {
+  const ConfiguracionScreen({super.key});
+
+  @override
+  State<ConfiguracionScreen> createState() => _ConfiguracionScreenState();
+}
+
+class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _nombreProductorController = TextEditingController();
+  final _nombreFincaController = TextEditingController();
+  final _ubicacionController = TextEditingController();
+  final _numeroVacasController = TextEditingController();
+  final _precioLitroController = TextEditingController();
+
+  bool _isLoading = true;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarConfiguracion();
+  }
+
+  Future<void> _cargarConfiguracion() async {
+    final finca = await DatabaseHelper.instance.getFinca();
+    if (finca != null) {
+      _nombreProductorController.text = finca['nombre_productor'] ?? '';
+      _nombreFincaController.text = finca['nombre_finca'] ?? '';
+      _ubicacionController.text = finca['ubicacion'] ?? '';
+      _numeroVacasController.text = (finca['numero_vacas'] ?? 0).toString();
+      _precioLitroController.text = (finca['precio_litro'] ?? 0).toString();
+    }
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _guardarConfiguracion() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isSaving = true;
+      });
+
+      final fincaData = {
+        'nombre_productor': _nombreProductorController.text,
+        'nombre_finca': _nombreFincaController.text,
+        'ubicacion': _ubicacionController.text,
+        'numero_vacas': int.parse(_numeroVacasController.text),
+        'precio_litro': double.parse(_precioLitroController.text),
+      };
+
+      await DatabaseHelper.instance.insertOrUpdateFinca(fincaData);
+
+      setState(() {
+        _isSaving = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Configuración guardada exitosamente')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Configuración de Finca'),
+        backgroundColor: Colors.green,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Información del Productor',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _nombreProductorController,
+                        decoration: const InputDecoration(
+                          labelText: 'Nombre del Productor',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.person),
+                        ),
+                        validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _nombreFincaController,
+                        decoration: const InputDecoration(
+                          labelText: 'Nombre de la Finca',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.home),  // ← CAMBIADO: farm no existe, usamos home
+                        ),
+                        validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _ubicacionController,
+                        decoration: const InputDecoration(
+                          labelText: 'Ubicación',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.location_on),
+                        ),
+                        validator: (value) => value!.isEmpty ? 'Campo requerido' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _numeroVacasController,
+                        decoration: const InputDecoration(
+                          labelText: 'Número de Vacas',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.pets),
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (value!.isEmpty) return 'Campo requerido';
+                          if (int.tryParse(value) == null) return 'Número válido';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _precioLitroController,
+                        decoration: const InputDecoration(
+                          labelText: 'Precio por Litro (COP)',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.attach_money),
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (value!.isEmpty) return 'Campo requerido';
+                          if (double.tryParse(value) == null) return 'Valor válido';
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _isSaving ? null : _guardarConfiguracion,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: _isSaving
+                    ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+                    : const Text('Guardar Configuración', style: TextStyle(fontSize: 16)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _nombreProductorController.dispose();
+    _nombreFincaController.dispose();
+    _ubicacionController.dispose();
+    _numeroVacasController.dispose();
+    _precioLitroController.dispose();
+    super.dispose();
+  }
+}
