@@ -16,6 +16,7 @@ class _GraficasScreenState extends State<GraficasScreen> {
   double _pendiente = 0;
   double _intercepto = 0;
   List<double> _predicciones = [];
+  List<DateTime> _fechas = [];
 
   @override
   void initState() {
@@ -31,6 +32,9 @@ class _GraficasScreenState extends State<GraficasScreen> {
     final registros = await DatabaseHelper.instance.queryAllRegistros();
     setState(() {
       _registros = registros.reversed.toList();
+      _fechas = _registros.map((r) {
+        return DateTime.parse(r['fecha']);
+      }).toList();
       _calcularRegresion();
       _calcularPredicciones();
       _isLoading = false;
@@ -49,7 +53,7 @@ class _GraficasScreenState extends State<GraficasScreen> {
 
     for (int i = 0; i < n; i++) {
       double x = i.toDouble();
-      double y = _registros[i]['litros_total'] as double;
+      double y = (_registros[i]['litros_total'] ?? 0).toDouble();
       sumX += x;
       sumY += y;
       sumXY += x * y;
@@ -283,7 +287,28 @@ class _GraficasScreenState extends State<GraficasScreen> {
               child: LineChart(
                 LineChartData(
                   gridData: const FlGridData(show: true),
-                  titlesData: const FlTitlesData(show: true),
+                  titlesData: FlTitlesData(
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        interval: 1,
+                        getTitlesWidget: (value, meta) {
+                          int index = value.toInt();
+
+                          if (index < 0 || index >= _fechas.length) {
+                            return Container();
+                          }
+
+                          String fecha = DateFormat('dd/MM').format(_fechas[index]);
+
+                          return Text(
+                            fecha,
+                            style: const TextStyle(fontSize: 10),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
                   borderData: FlBorderData(show: true),
                   lineBarsData: [
                     LineChartBarData(
