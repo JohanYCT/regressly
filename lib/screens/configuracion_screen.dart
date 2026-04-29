@@ -253,7 +253,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                         decoration: const InputDecoration(
                           labelText: 'Número de Vacas',
                           border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.pets),
+                          prefixIcon: Icon(Icons.agriculture),
                         ),
                         keyboardType: TextInputType.number,
 
