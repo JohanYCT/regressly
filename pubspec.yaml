@@ -29,6 +29,7 @@ flutter:
 
   assets:
     - assets/images/logo.png
+    - assets/images/icon_vaca.png
 
 flutter_launcher_icons:
   android: true

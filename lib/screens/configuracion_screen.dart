@@ -248,15 +248,21 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                       // 🐄 NÚMERO DE VACAS
                       // ============================
 
-                      TextFormField(
-                        controller: _numeroVacasController,
-                        decoration: const InputDecoration(
-                          labelText: 'Número de Vacas',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.agriculture),
+                  TextFormField(
+                    controller: _numeroVacasController,
+                    decoration: InputDecoration(
+                      labelText: 'Número de Vacas',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Image.asset(
+                          'assets/images/icon_vaca.png',
+                          width: 16,
+                          height: 16,
                         ),
-                        keyboardType: TextInputType.number,
-
+                      ),
+                    ),
+                    keyboardType: TextInputType.number,
                         /// Validación numérica
                         validator: (value) {
                           if (value!.isEmpty) return 'Campo requerido';
