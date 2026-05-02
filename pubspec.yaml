@@ -30,11 +30,12 @@ flutter:
   assets:
     - assets/images/logo.png
     - assets/images/icon_vaca.png
+    - assets/images/icon_regressly.png
 
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/images/logo.png"
+  image_path: "assets/images/icon_regressly.png"
   adaptive_icon_background: "#2E7D32"  # Color verde fondo
-  adaptive_icon_foreground: "assets/images/logo.png"
+  adaptive_icon_foreground: "assets/images/icon_regressly.png"
   min_sdk_android: 21
