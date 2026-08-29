@@ -306,6 +306,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
               // ============================
 
               ElevatedButton(
+                key: const Key('btn_guardar_config'),
                 onPressed: _isSaving ? null : _guardarConfiguracion,
 
                 style: ElevatedButton.styleFrom(

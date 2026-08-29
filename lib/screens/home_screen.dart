@@ -139,6 +139,7 @@ class HomeScreen extends StatelessWidget {
 
                   _buildMenuCard(
                     context,
+                    key: const Key('nav_registro'),
                     icon: Icons.edit_calendar,
                     title: 'Registro Diario',
                     subtitle: 'Registra la producción de leche',
@@ -154,6 +155,7 @@ class HomeScreen extends StatelessWidget {
 
                   _buildMenuCard(
                     context,
+                    key: const Key('nav_analisis'),
                     icon: Icons.show_chart,
                     title: 'Gráficas y Análisis',
                     subtitle: 'Visualiza tendencias y proyecciones',
@@ -169,6 +171,7 @@ class HomeScreen extends StatelessWidget {
 
                   _buildMenuCard(
                     context,
+                    key: const Key('nav_configuracion'),
                     icon: Icons.settings,
                     title: 'Configuración',
                     subtitle: 'Configura tu finca',
@@ -201,6 +204,7 @@ class HomeScreen extends StatelessWidget {
   /// - Al hacer tap navega a la ruta definida usando Navigator
   Widget _buildMenuCard(
       BuildContext context, {
+        Key? key,
         required IconData icon,
         required String title,
         required String subtitle,
@@ -209,6 +213,7 @@ class HomeScreen extends StatelessWidget {
       }) {
 
     return Card(
+      key: key,
       elevation: 2,
 
       /// Bordes redondeados

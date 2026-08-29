@@ -435,6 +435,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
               /// - Muestra un loader durante la operación
               /// - Cambia el texto según el modo (guardar / editar)
               ElevatedButton(
+                key: const Key('btn_guardar_registro'),
                 onPressed: _isLoading ? null : _guardarRegistro,
 
                 child: _isLoading
