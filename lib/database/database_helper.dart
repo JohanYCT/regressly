@@ -262,4 +262,16 @@ class DatabaseHelper {
       );
     }
   }
+
+  // =====================================================
+  // 🧹 LIMPIEZA PARA TESTS
+  // =====================================================
+
+  /// Elimina todos los datos de las tablas.
+  /// Útil para tests de integración y E2E.
+  Future<void> clearDatabase() async {
+    final db = await database;
+    await db.delete('registros');
+    await db.delete('finca');
+  }
 }
