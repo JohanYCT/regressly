@@ -1,5 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:regressly/models/registro_model.dart';
+import 'package:regressly/models/finca_model.dart';
 
 /// Clase encargada de gestionar toda la base de datos SQLite.
 ///
@@ -142,30 +144,32 @@ class DatabaseHelper {
   /// Inserta un nuevo registro de producción.
   ///
   /// Retorna el ID del registro insertado.
-  Future<int> insertRegistro(Map<String, dynamic> registro) async {
+  Future<int> insertRegistro(RegistroModel registro) async {
 
     final db = await database;
 
-    return await db.insert('registros', registro);
+    return await db.insert('registros', registro.toMap());
   }
 
   /// Obtiene todos los registros ordenados por fecha descendente.
-  Future<List<Map<String, dynamic>>> queryAllRegistros() async {
+  Future<List<RegistroModel>> queryAllRegistros() async {
 
     final db = await database;
 
-    return await db.query(
+    final result = await db.query(
       'registros',
       orderBy: 'fecha DESC',
     );
+
+    return result.map((json) => RegistroModel.fromMap(json)).toList();
   }
 
   /// Obtiene un registro específico por fecha.
   ///
   /// Retorna:
-  /// - Map → si existe
+  /// - RegistroModel → si existe
   /// - null → si no existe
-  Future<Map<String, dynamic>?> getRegistroPorFecha(String fecha) async {
+  Future<RegistroModel?> getRegistroPorFecha(String fecha) async {
 
     final db = await database;
 
@@ -176,24 +180,22 @@ class DatabaseHelper {
     );
 
     if (result.isNotEmpty) {
-      return result.first;
+      return RegistroModel.fromMap(result.first);
     }
 
     return null;
   }
 
   /// Actualiza un registro existente.
-  ///
-  /// Requiere que el Map incluya el campo 'id'.
-  Future<int> updateRegistro(Map<String, dynamic> registro) async {
+  Future<int> updateRegistro(RegistroModel registro) async {
 
     final db = await database;
 
     return await db.update(
       'registros',
-      registro,
+      registro.toMap(),
       where: 'id = ?',
-      whereArgs: [registro['id']],
+      whereArgs: [registro.id],
     );
   }
 
@@ -217,14 +219,14 @@ class DatabaseHelper {
   ///
   /// Nota:
   /// - Se asume que solo existe UNA configuración
-  Future<Map<String, dynamic>?> getFinca() async {
+  Future<FincaModel?> getFinca() async {
 
     final db = await database;
 
     final result = await db.query('finca');
 
     if (result.isNotEmpty) {
-      return result.first;
+      return FincaModel.fromMap(result.first);
     }
 
     return null;
@@ -237,7 +239,7 @@ class DatabaseHelper {
   /// - Si ya existe → UPDATE
   ///
   /// Esto evita duplicados y mantiene un único registro.
-  Future<void> insertOrUpdateFinca(Map<String, dynamic> fincaData) async {
+  Future<void> insertOrUpdateFinca(FincaModel finca) async {
 
     final db = await database;
 
@@ -247,14 +249,14 @@ class DatabaseHelper {
     if (existing.isEmpty) {
 
       /// Inserta nueva configuración
-      await db.insert('finca', fincaData);
+      await db.insert('finca', finca.toMap());
 
     } else {
 
       /// Actualiza la existente
       await db.update(
         'finca',
-        fincaData,
+        finca.toMap(),
         where: 'id = ?',
         whereArgs: [existing.first['id']],
       );

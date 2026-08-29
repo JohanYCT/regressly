@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:regressly/database/database_helper.dart';
 import 'package:regressly/app_theme.dart';
+import 'package:regressly/models/registro_model.dart';
 
 /// Pantalla principal encargada del registro diario de la producción de leche.
 ///
@@ -59,7 +60,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
   bool _editando = false;
 
   /// Almacena el registro existente (si ya hay datos en esa fecha)
-  Map<String, dynamic>? _registroExistente;
+  RegistroModel? _registroExistente;
 
   @override
   void initState() {
@@ -87,9 +88,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
         _registroExistente = existente;
 
         /// Carga de datos en los inputs
-        _litrosMananaController.text = (existente['litros_manana'] ?? 0).toString();
-        _litrosTardeController.text = (existente['litros_tarde'] ?? 0).toString();
-        _observacionesController.text = existente['observaciones'] ?? '';
+        _litrosMananaController.text = existente.litrosManana.toString();
+        _litrosTardeController.text = existente.litrosTarde.toString();
+        _observacionesController.text = existente.observaciones;
       });
     }
   }
@@ -159,14 +160,15 @@ class _RegistroScreenState extends State<RegistroScreen> {
       final double litrosTotal = litrosManana + litrosTarde;
 
       /// Construcción del objeto a guardar
-      final registroData = {
-        'fecha': _fechaSeleccionada,
-        'litros_manana': litrosManana,
-        'litros_tarde': litrosTarde,
-        'litros_total': litrosTotal,
-        'observaciones': _observacionesController.text,
-        'created_at': DateTime.now().toIso8601String(),
-      };
+      final registro = RegistroModel(
+        id: _editando ? _registroExistente?.id : null,
+        fecha: _fechaSeleccionada,
+        litrosManana: litrosManana,
+        litrosTarde: litrosTarde,
+        litrosTotal: litrosTotal,
+        observaciones: _observacionesController.text,
+        createdAt: DateTime.now().toIso8601String(),
+      );
 
       // ============================
       // ✏️ MODO EDICIÓN
@@ -174,10 +176,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
 
       if (_editando && _registroExistente != null) {
 
-        /// Se añade el ID para actualizar el registro existente
-        registroData['id'] = _registroExistente!['id'];
-
-        await DatabaseHelper.instance.updateRegistro(registroData);
+        await DatabaseHelper.instance.updateRegistro(registro);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -191,7 +190,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
         // ➕ NUEVO REGISTRO
         // ============================
 
-        await DatabaseHelper.instance.insertRegistro(registroData);
+        await DatabaseHelper.instance.insertRegistro(registro);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

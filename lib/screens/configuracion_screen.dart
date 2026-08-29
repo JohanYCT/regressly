@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:regressly/database/database_helper.dart';
+import 'package:regressly/models/finca_model.dart';
 
 /// Pantalla encargada de gestionar la configuración de la finca.
 ///
@@ -73,11 +74,11 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
     if (finca != null) {
 
       /// Asignación de valores a los inputs
-      _nombreProductorController.text = finca['nombre_productor'] ?? '';
-      _nombreFincaController.text = finca['nombre_finca'] ?? '';
-      _ubicacionController.text = finca['ubicacion'] ?? '';
-      _numeroVacasController.text = (finca['numero_vacas'] ?? 0).toString();
-      _precioLitroController.text = (finca['precio_litro'] ?? 0).toString();
+      _nombreProductorController.text = finca.nombreProductor;
+      _nombreFincaController.text = finca.nombreFinca;
+      _ubicacionController.text = finca.ubicacion;
+      _numeroVacasController.text = finca.numeroVacas.toString();
+      _precioLitroController.text = finca.precioLitro.toString();
     }
 
     setState(() {
@@ -105,16 +106,16 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
       });
 
       /// Construcción del objeto a guardar
-      final fincaData = {
-        'nombre_productor': _nombreProductorController.text,
-        'nombre_finca': _nombreFincaController.text,
-        'ubicacion': _ubicacionController.text,
-        'numero_vacas': int.parse(_numeroVacasController.text),
-        'precio_litro': double.parse(_precioLitroController.text),
-      };
+      final finca = FincaModel(
+        nombreProductor: _nombreProductorController.text,
+        nombreFinca: _nombreFincaController.text,
+        ubicacion: _ubicacionController.text,
+        numeroVacas: int.parse(_numeroVacasController.text),
+        precioLitro: double.parse(_precioLitroController.text),
+      );
 
       /// Inserta o actualiza en la base de datos
-      await DatabaseHelper.instance.insertOrUpdateFinca(fincaData);
+      await DatabaseHelper.instance.insertOrUpdateFinca(finca);
 
       setState(() {
         _isSaving = false;

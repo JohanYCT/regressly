@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:regressly/database/database_helper.dart';
+import 'package:regressly/models/registro_model.dart';
+import 'package:regressly/services/analytics_service.dart';
 
 /// Pantalla encargada de mostrar análisis y visualización de datos
 /// mediante gráficas y modelos de regresión.
@@ -35,17 +37,17 @@ class _GraficasScreenState extends State<GraficasScreen> {
   // 📊 VARIABLES DE ESTADO
   // ============================
 
+  /// Servicio de analítica para cálculos estadísticos
+  final AnalyticsService _analyticsService = AnalyticsService();
+
   /// Lista de registros obtenidos desde la base de datos
-  List<Map<String, dynamic>> _registros = [];
+  List<RegistroModel> _registros = [];
 
   /// Control de carga (loader)
   bool _isLoading = true;
 
-  /// Pendiente de la regresión lineal (m en y = mx + b)
-  double _pendiente = 0;
-
-  /// Intercepto de la regresión (b en y = mx + b)
-  double _intercepto = 0;
+  /// Resultado de la regresión lineal
+  RegressionResult? _regressionResult;
 
   /// Lista de valores predichos (incluye días futuros)
   List<double> _predicciones = [];
@@ -90,144 +92,28 @@ class _GraficasScreenState extends State<GraficasScreen> {
 
       /// Conversión de fechas String → DateTime
       _fechas = _registros.map((r) {
-        return DateTime.parse(r['fecha']);
+        return DateTime.parse(r.fecha);
       }).toList();
 
-      /// Procesamiento de datos
-      _calcularRegresion();
-      _calcularPredicciones();
+      /// Procesamiento de datos mediante el servicio
+      _regressionResult = _analyticsService.calcularRegresion(_registros);
+      _predicciones = _analyticsService.calcularPredicciones(
+        _registros,
+        _regressionResult!.pendiente,
+        _regressionResult!.intercepto,
+        7,
+      );
 
       _isLoading = false;
     });
   }
 
   // ============================
-  // 📈 REGRESIÓN LINEAL
+  // 📈 MÉTODOS ELIMINADOS (Movidos al Servicio)
   // ============================
-
-  /// Calcula la regresión lineal simple usando el método de mínimos cuadrados.
-  ///
-  /// Fórmula:
-  /// y = mx + b
-  ///
-  /// Donde:
-  /// - m = pendiente (tendencia)
-  /// - b = intercepto
-  ///
-  /// Esta función calcula:
-  /// - sumatorias necesarias
-  /// - pendiente (m)
-  /// - intercepto (b)
-  void _calcularRegresion() {
-
-    /// Se requiere mínimo 2 puntos para calcular regresión
-    if (_registros.length < 2) {
-      _pendiente = 0;
-      _intercepto = 0;
-      return;
-    }
-
-    int n = _registros.length;
-
-    double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-
-    /// Recorrido de datos para calcular sumatorias
-    for (int i = 0; i < n; i++) {
-
-      /// x representa el índice (tiempo)
-      double x = i.toDouble();
-
-      /// y representa la producción total
-      double y = (_registros[i]['litros_total'] ?? 0).toDouble();
-
-      sumX += x;
-      sumY += y;
-      sumXY += x * y;
-      sumX2 += x * x;
-    }
-
-    /// Cálculo del denominador de la fórmula
-    double denominador = (n * sumX2 - sumX * sumX);
-
-    if (denominador != 0) {
-
-      /// Cálculo de la pendiente (m)
-      _pendiente = (n * sumXY - sumX * sumY) / denominador;
-
-      /// Cálculo del intercepto (b)
-      _intercepto = (sumY - _pendiente * sumX) / n;
-    }
-  }
-
-  // ============================
-  // 🔮 PREDICCIONES
-  // ============================
-
-  /// Genera predicciones futuras basadas en la regresión lineal.
-  ///
-  /// Se proyectan:
-  /// - Todos los datos actuales
-  /// - +7 días adicionales (proyección)
-  ///
-  /// Nota:
-  /// Se evita que los valores sean negativos.
-  void _calcularPredicciones() {
-
-    _predicciones.clear();
-
-    int n = _registros.length;
-
-    for (int i = 0; i < n + 7; i++) {
-
-      /// Aplicación de la ecuación de la recta
-      double prediccion = _intercepto + _pendiente * i;
-
-      /// Se asegura que no haya valores negativos
-      _predicciones.add(prediccion > 0 ? prediccion : 0);
-    }
-  }
-
-  // ============================
-  // 📊 COEFICIENTE R²
-  // ============================
-
-  /// Calcula el coeficiente de determinación (R²).
-  ///
-  /// R² mide qué tan bien la regresión explica los datos:
-  /// - 1 → ajuste perfecto
-  /// - 0 → no hay relación
-  ///
-  /// Fórmula:
-  /// R² = 1 - (SSres / SStot)
-  double _getR2() {
-
-    if (_registros.length < 2) return 0;
-
-    double sumY = 0;
-
-    /// Cálculo de la media de Y
-    for (var r in _registros) {
-      sumY += r['litros_total'] as double;
-    }
-
-    double meanY = sumY / _registros.length;
-
-    double ssRes = 0; // Error residual
-    double ssTot = 0; // Variabilidad total
-
-    for (int i = 0; i < _registros.length; i++) {
-
-      double yReal = _registros[i]['litros_total'] as double;
-
-      /// Valor predicho por la recta
-      double yPred = _intercepto + _pendiente * i;
-
-      ssRes += (yReal - yPred) * (yReal - yPred);
-      ssTot += (yReal - meanY) * (yReal - meanY);
-    }
-
-    return ssTot == 0 ? 0 : 1 - (ssRes / ssTot);
-  }
+  // _calcularRegresion()
+  // _calcularPredicciones()
+  // _getR2()
 
   // ============================
   // 📍 GENERACIÓN DE PUNTOS (GRÁFICAS)
@@ -247,7 +133,7 @@ class _GraficasScreenState extends State<GraficasScreen> {
     for (int i = 0; i < _registros.length; i++) {
 
       double x = i.toDouble();
-      double y = _registros[i]['litros_total'] as double;
+      double y = _registros[i].litrosTotal;
 
       puntos.add(FlSpot(x, y));
     }
@@ -256,21 +142,18 @@ class _GraficasScreenState extends State<GraficasScreen> {
   }
 
   /// Genera los puntos de la línea de tendencia (regresión lineal).
-  ///
-  /// Cada punto sigue la ecuación:
-  /// y = mx + b
-  ///
-  /// Se utiliza en la línea verde (tendencia).
   List<FlSpot> _generarLineaTendencia() {
 
     List<FlSpot> puntos = [];
+
+    if (_regressionResult == null) return puntos;
 
     for (int i = 0; i < _registros.length; i++) {
 
       double x = i.toDouble();
 
       /// Aplicación de la ecuación de regresión
-      double y = _intercepto + _pendiente * i;
+      double y = _regressionResult!.intercepto + _regressionResult!.pendiente * i;
 
       /// Se evita mostrar valores negativos
       puntos.add(FlSpot(x, y > 0 ? y : 0));
@@ -451,9 +334,7 @@ class _GraficasScreenState extends State<GraficasScreen> {
 
     /// Recorrido para calcular métricas
     for (var r in _registros) {
-
-      double litros = r['litros_total'] as double;
-
+      double litros = r.litrosTotal;
       total += litros;
 
       if (litros > maximo) maximo = litros;
@@ -540,19 +421,19 @@ class _GraficasScreenState extends State<GraficasScreen> {
                 _buildStatItem(
                   'Tendencia',
 
-                  _pendiente > 0
+                  (_regressionResult?.pendiente ?? 0) > 0
                       ? '↑ Positiva'
-                      : (_pendiente < 0 ? '↓ Negativa' : '→ Estable'),
+                      : ((_regressionResult?.pendiente ?? 0) < 0 ? '↓ Negativa' : '→ Estable'),
 
-                  _pendiente > 0
+                  (_regressionResult?.pendiente ?? 0) > 0
                       ? Icons.trending_up
-                      : (_pendiente < 0
+                      : ((_regressionResult?.pendiente ?? 0) < 0
                       ? Icons.trending_down
                       : Icons.trending_flat),
 
-                  color: _pendiente > 0
+                  color: (_regressionResult?.pendiente ?? 0) > 0
                       ? Colors.green
-                      : (_pendiente < 0 ? Colors.red : Colors.orange),
+                      : ((_regressionResult?.pendiente ?? 0) < 0 ? Colors.red : Colors.orange),
                 ),
               ],
             ),
@@ -791,13 +672,11 @@ class _GraficasScreenState extends State<GraficasScreen> {
   // ============================
 
   /// Muestra información matemática del modelo:
-  /// - Pendiente
-  /// - Intercepto
-  /// - R²
-  /// - Interpretación del comportamiento
   Widget _buildRegressionInfo() {
 
-    double r2 = _getR2();
+    double pendiente = _regressionResult?.pendiente ?? 0;
+    double intercepto = _regressionResult?.intercepto ?? 0;
+    double r2 = _regressionResult?.r2 ?? 0;
 
     return Card(
       elevation: 2,
@@ -819,11 +698,11 @@ class _GraficasScreenState extends State<GraficasScreen> {
 
             const SizedBox(height: 12),
 
-            _buildInfoRow('Pendiente:', _pendiente.toStringAsFixed(3)),
+            _buildInfoRow('Pendiente:', pendiente.toStringAsFixed(3)),
 
             const SizedBox(height: 8),
 
-            _buildInfoRow('Intercepto:', _intercepto.toStringAsFixed(1)),
+            _buildInfoRow('Intercepto:', intercepto.toStringAsFixed(1)),
 
             const SizedBox(height: 8),
 
@@ -838,12 +717,12 @@ class _GraficasScreenState extends State<GraficasScreen> {
             // 📊 INTERPRETACIÓN
             // ============================
 
-            if (_pendiente > 0)
+            if (pendiente > 0)
               const Text(
                 '📈 La producción está en aumento',
                 style: TextStyle(color: Colors.green),
               )
-            else if (_pendiente < 0)
+            else if (pendiente < 0)
               const Text(
                 '📉 La producción está en disminución',
                 style: TextStyle(color: Colors.red),
