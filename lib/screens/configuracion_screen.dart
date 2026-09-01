@@ -335,6 +335,7 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                   style: TextStyle(fontSize: 16),
                 ),
               ),
+              const SizedBox(height: 100), // Espacio extra para scroll
             ],
           ),
         ),

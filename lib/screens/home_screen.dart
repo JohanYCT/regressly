@@ -33,21 +33,23 @@ class HomeScreen extends StatelessWidget {
       // 🧱 CUERPO PRINCIPAL
       // ============================
 
-      body: Container(
-
-        /// Fondo con degradado vertical (de gris claro a blanco)
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [AppTheme.backgroundGrey, Colors.white],
+      body: SingleChildScrollView(
+        child: Container(
+          /// Fondo con degradado vertical
+          /// Usamos constraints para asegurar que el fondo cubra al menos el alto de la pantalla
+          constraints: BoxConstraints(
+            minHeight: MediaQuery.of(context).size.height - AppBar().preferredSize.height - MediaQuery.of(context).padding.top,
           ),
-        ),
-
-        child: Column(
-          children: [
-
-            const SizedBox(height: 50),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [AppTheme.backgroundGrey, Colors.white],
+            ),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 50),
 
             // ============================
             // 🖼️ LOGO DE LA APLICACIÓN
@@ -181,11 +183,13 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 24), // Espacio extra al final
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   // ============================
   // 🧩 COMPONENTE REUTILIZABLE

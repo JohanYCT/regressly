@@ -453,6 +453,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                 /// Texto dinámico según estado
                     : Text(_editando ? 'Actualizar Registro' : 'Guardar Registro'),
               ),
+              const SizedBox(height: 100), // Espacio extra para asegurar que el botón suba sobre el teclado
             ],
           ),
         ),
