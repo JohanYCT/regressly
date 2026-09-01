@@ -38,7 +38,13 @@ Regressly es una herramienta diseñada para productores lecheros que necesitan:
 - Android SDK (para Android)
 - Xcode (para iOS)
 
-## 📦 Instalación
+## � Versión Beta
+
+La versión beta de Regressly ya está disponible para descarga directa desde GitHub Releases.
+
+👉 [Descargar versión beta](https://github.com/JohanYCT/regressly/releases/latest/download/regressly-beta.apk)
+
+## �📦 Instalación
 
 1. Clona el repositorio:
 ```bash
