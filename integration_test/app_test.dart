@@ -18,6 +18,14 @@ void main() {
       app.main();
       await tester.pumpAndSettle();
 
+      // Helper para cerrar el teclado de forma robusta en cualquier dispositivo
+      Future<void> hideKeyboard() async {
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pumpAndSettle();
+        // Espera extra para asegurar que el teclado se oculte y no bloquee el hit-test
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+
       // -----------------------------------------------------------
       // 1. CONFIGURACIÓN DE LA FINCA
       // -----------------------------------------------------------
@@ -27,28 +35,31 @@ void main() {
       final productorField = find.widgetWithText(TextFormField, 'Nombre del Productor');
       await tester.ensureVisible(productorField);
       await tester.enterText(productorField, 'Carlos Gomez');
+      await tester.pumpAndSettle();
       
       final fincaField = find.widgetWithText(TextFormField, 'Nombre de la Finca');
       await tester.ensureVisible(fincaField);
       await tester.enterText(fincaField, 'Rancho Alegre');
+      await tester.pumpAndSettle();
       
       final ubicacionField = find.widgetWithText(TextFormField, 'Ubicación');
       await tester.ensureVisible(ubicacionField);
       await tester.enterText(ubicacionField, 'Antioquia');
+      await tester.pumpAndSettle();
       
       final vacasField = find.widgetWithText(TextFormField, 'Número de Vacas');
       await tester.ensureVisible(vacasField);
       await tester.enterText(vacasField, '15');
+      await tester.pumpAndSettle();
       
       final precioField = find.widgetWithText(TextFormField, 'Precio por Litro (COP)');
       await tester.ensureVisible(precioField);
       await tester.enterText(precioField, '2100');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
-      await tester.pumpAndSettle();
+      
+      await hideKeyboard();
       
       final btnGuardarConfig = find.byKey(const Key('btn_guardar_config'));
       await tester.ensureVisible(btnGuardarConfig);
-      await tester.drag(find.byType(SingleChildScrollView).first, const Offset(0, -200));
       await tester.pumpAndSettle();
       await tester.tap(btnGuardarConfig);
       await tester.pumpAndSettle();
@@ -56,6 +67,7 @@ void main() {
       expect(find.text('Configuración guardada exitosamente'), findsOneWidget);
       await tester.pageBack();
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       // -----------------------------------------------------------
       // 2. REGISTRO DÍA 1 (Producción Base: 80L)
@@ -66,16 +78,16 @@ void main() {
       final mananaField = find.widgetWithText(TextFormField, 'Litros Mañana');
       await tester.ensureVisible(mananaField);
       await tester.enterText(mananaField, '40');
+      await tester.pumpAndSettle();
       
       final tardeField = find.widgetWithText(TextFormField, 'Litros Tarde');
       await tester.ensureVisible(tardeField);
       await tester.enterText(tardeField, '40');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
-      await tester.pumpAndSettle();
+      
+      await hideKeyboard();
       
       final btnGuardarRegistro = find.byKey(const Key('btn_guardar_registro'));
       await tester.ensureVisible(btnGuardarRegistro);
-      await tester.drag(find.byType(SingleChildScrollView).last, const Offset(0, -300));
       await tester.pumpAndSettle();
       await tester.tap(btnGuardarRegistro);
       await tester.pumpAndSettle();
@@ -83,6 +95,7 @@ void main() {
       
       await tester.pageBack();
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       // -----------------------------------------------------------
       // 3. REGISTRO DÍA 2 (Actualización a 90L)
@@ -90,23 +103,19 @@ void main() {
       await tester.tap(find.byKey(const Key('nav_registro')));
       await tester.pumpAndSettle();
       
-      // Nota: No abrimos el selector de fecha para evitar bloquear el test,
-      // simplemente actualizamos el registro del día de hoy.
-
       final mananaEditField = find.widgetWithText(TextFormField, 'Litros Mañana');
       await tester.ensureVisible(mananaEditField);
       await tester.enterText(mananaEditField, '45');
+      await tester.pumpAndSettle();
       
       final tardeEditField = find.widgetWithText(TextFormField, 'Litros Tarde');
       await tester.ensureVisible(tardeEditField);
       await tester.enterText(tardeEditField, '45');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
-      await tester.pumpAndSettle();
       
-      // Esto sobreescribirá el registro de hoy (Actualizar)
+      await hideKeyboard();
+      
       final btnActualizarRegistro = find.byKey(const Key('btn_guardar_registro'));
       await tester.ensureVisible(btnActualizarRegistro);
-      await tester.drag(find.byType(SingleChildScrollView).last, const Offset(0, -300));
       await tester.pumpAndSettle();
       await tester.tap(btnActualizarRegistro);
       await tester.pumpAndSettle();
@@ -114,15 +123,16 @@ void main() {
 
       await tester.pageBack();
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       // -----------------------------------------------------------
       // 4. VERIFICACIÓN EN ANALÍTICA
       // -----------------------------------------------------------
       await tester.tap(find.byKey(const Key('nav_analisis')));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       // Verificar que el promedio se muestra correctamente (90.0 L)
-      // Buscamos el texto '90.0 L' que sea descendiente de la columna MÁS CERCANA al texto 'Promedio'
       final promedioItem = find.ancestor(
         of: find.text('Promedio'),
         matching: find.byType(Column),
@@ -136,9 +146,6 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Estadísticas de Producción'), findsOneWidget);
-      
-      // El test E2E confirma que la configuración de la finca, el guardado 
-      // de registros y la visualización de analíticas están conectados.
     });
   });
 }
