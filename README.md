@@ -42,7 +42,7 @@ Regressly es una herramienta diseñada para productores lecheros que necesitan:
 
 La versión beta de Regressly ya está disponible para descarga directa desde GitHub Releases.
 
-👉 [Descargar versión beta](https://github.com/JohanYCT/regressly/releases/latest/download/regressly-beta.apk)
+👉 [Descargar versión beta](https://github.com/JohanYCT/regressly/releases/tag/v1.0.0-Beta.1)
 
 ## �📦 Instalación
 
