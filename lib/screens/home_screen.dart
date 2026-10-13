@@ -180,10 +180,26 @@ class HomeScreen extends StatelessWidget {
                     color: AppTheme.textLight,
                     route: '/configuracion',
                   ),
+
+                  const SizedBox(height: 16),
+
+                  // ==================================
+                  // 💲OPCIÓN: ESTIMACIONES FINANCIERAS
+                  // ==================================
+
+                  _buildMenuCard(
+                    context,
+                    key: const Key('nav_estimaciones'),
+                    icon: Icons.show_chart,
+                    title: 'Estimaciones Financieras',
+                    subtitle: 'Visualiza ingresos y proyecciones financieras',
+                    color: AppTheme.lightGreen,
+                    route: '/analisis',
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 24), // Espacio extra al final
+            const SizedBox(height: 5), // Espacio extra al final
           ],
         ),
       ),
