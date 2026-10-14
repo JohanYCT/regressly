@@ -145,7 +145,7 @@ class HomeScreen extends StatelessWidget {
                     icon: Icons.edit_calendar,
                     title: 'Registro Diario',
                     subtitle: 'Registra la producción de leche',
-                    color: AppTheme.primaryGreen,
+                    color: AppTheme.textLight,
                     route: '/registro',
                   ),
 
@@ -190,11 +190,11 @@ class HomeScreen extends StatelessWidget {
                   _buildMenuCard(
                     context,
                     key: const Key('nav_estimaciones'),
-                    icon: Icons.show_chart,
+                    icon: Icons.attach_money,
                     title: 'Estimaciones Financieras',
                     subtitle: 'Visualiza ingresos y proyecciones financieras',
                     color: AppTheme.lightGreen,
-                    route: '/analisis',
+                    route: '/calculo',
                   ),
                 ],
               ),

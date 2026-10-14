@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 // Importa el archivo donde defines los estilos (colores, temas, etc.)
 import 'package:regressly/app_theme.dart';
+import 'package:regressly/screens/financiero_screen.dart';
 
 // Importa las diferentes pantallas de la aplicación
 import 'package:regressly/screens/home_screen.dart';
@@ -57,6 +58,9 @@ class MyApp extends StatelessWidget {
 
         // Pantalla de análisis y gráficas (regresión lineal)
         '/analisis': (context) => const GraficasScreen(),
+
+        // Pantalla de estimaciones financieras $
+        '/calculo': (context) => const FinancieroScreen(),
       },
     );
   }
