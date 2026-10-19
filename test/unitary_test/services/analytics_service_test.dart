@@ -64,8 +64,8 @@ void main() {
         RegistroModel(fecha: 'D2', litrosManana: 6, litrosTarde: 6, litrosTotal: 12, observaciones: '', createdAt: ''),
       ];
 
-      final slope = 2.0;
-      final intercept = 10.0;
+      const slope = 2.0;
+      const intercept = 10.0;
 
       final predictions = analyticsService.calcularPredicciones(registros, slope, intercept, 2);
 

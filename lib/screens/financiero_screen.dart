@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:regressly/database/database_helper.dart';
-import 'package:regressly/app_theme.dart';
 
 class FinancieroScreen extends StatefulWidget {
   const FinancieroScreen({super.key});
@@ -11,10 +8,8 @@ class FinancieroScreen extends StatefulWidget {
 }
 
 class _FinancieroScreenState extends State<FinancieroScreen> {
-  final _formKey = GlobalKey<FormState>();
-
   /// Indica si se están cargando los datos iniciales
-  bool _isLoading = false;
+  final bool _isLoading = false;
 
   // ============================
   // 🧱 UI PRINCIPAL

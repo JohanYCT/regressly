@@ -277,11 +277,11 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     children: [
 
                       /// Encabezado de la sección
-                      Row(
+                      const Row(
                         children: [
-                          const Icon(Icons.production_quantity_limits, color: AppTheme.primaryGreen),
-                          const SizedBox(width: 12),
-                          const Text(
+                          Icon(Icons.production_quantity_limits, color: AppTheme.primaryGreen),
+                          SizedBox(width: 12),
+                          Text(
                             'Producción de Leche',
                             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
@@ -349,7 +349,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryGreen.withOpacity(0.1),
+                          color: AppTheme.primaryGreen.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
 
@@ -392,11 +392,11 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     children: [
 
                       /// Encabezado de la sección
-                      Row(
+                      const Row(
                         children: [
-                          const Icon(Icons.note, color: AppTheme.primaryGreen),
-                          const SizedBox(width: 12),
-                          const Text(
+                          Icon(Icons.note, color: AppTheme.primaryGreen),
+                          SizedBox(width: 12),
+                          Text(
                             'Observaciones',
                             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
