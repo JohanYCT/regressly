@@ -4,20 +4,20 @@ import 'package:intl/intl.dart';
 import 'package:regressly/database/database_helper.dart';
 import 'package:regressly/models/registro_model.dart';
 import 'package:regressly/services/analytics_service.dart';
+import 'package:regressly/app_theme.dart';
 
-/// Pantalla encargada de mostrar análisis y visualización de datos
-/// mediante gráficas y modelos de regresión.
-///
-/// Funcionalidades principales:
-/// - Visualización de producción diaria en gráfico de líneas
-/// - Cálculo de regresión lineal (tendencia)
-/// - Predicción de producción futura (7 días)
-/// - Métricas estadísticas (R², promedio, etc.)
-///
-/// Utiliza:
-/// - fl_chart → para renderizar gráficas
-/// - intl → para formateo de fechas
-/// - DatabaseHelper → para obtener datos almacenados
+/// ============================================================================
+/// PANTALLA: GraficasScreen
+/// ============================================================================
+/// Pantalla principal encargada de mostrar el análisis de tendencias, estadísticas
+/// de producción lechera y proyecciones futuras en la aplicación Regressly.
+/// 
+/// Diseñada con un enfoque extremadamente intuitivo, visual y sencillo para
+/// productores rurales del Valle de Ubaté, evitando tecnicismos matemáticos complejos.
+/// 
+/// REGLA CLAVE DE FIABILIDAD:
+/// Las proyecciones (línea verde de tendencia y pronóstico a 7 días) se bloquean
+/// automáticamente hasta que el productor complete al menos **14 días** de registro.
 class GraficasScreen extends StatefulWidget {
   const GraficasScreen({super.key});
 
@@ -25,415 +25,339 @@ class GraficasScreen extends StatefulWidget {
   State<GraficasScreen> createState() => _GraficasScreenState();
 }
 
-/// Estado de la pantalla GraficasScreen.
-///
-/// Aquí se maneja:
-/// - Carga de datos desde SQLite
-/// - Procesamiento estadístico
-/// - Generación de datos para gráficas
 class _GraficasScreenState extends State<GraficasScreen> {
 
-  // ============================
-  // 📊 VARIABLES DE ESTADO
-  // ============================
+  // ==========================================================================
+  // 📊 VARIABLES DE ESTADO Y SERVICIOS
+  // ==========================================================================
 
-  /// Servicio de analítica para cálculos estadísticos
+  /// Instancia del servicio de analítica matemática (regresión lineal y R²)
   final AnalyticsService _analyticsService = AnalyticsService();
 
-  /// Lista de registros obtenidos desde la base de datos
+  /// Lista que almacena los registros de producción lechera obtenidos de SQLite
   List<RegistroModel> _registros = [];
 
-  /// Control de carga (loader)
+  /// Bandera booleana para controlar el indicador de carga (CircularProgressIndicator)
   bool _isLoading = true;
 
-  /// Resultado de la regresión lineal
+  /// Objeto que almacena los resultados de la regresión lineal (pendiente, intercepto, R²)
   RegressionResult? _regressionResult;
 
-  /// Lista de valores predichos (incluye días futuros)
+  /// Lista que almacena los valores calculados de predicción (datos reales + 7 días futuros)
   List<double> _predicciones = [];
 
-  /// Lista de fechas correspondientes a los registros
+  /// Lista de objetos DateTime convertidos a partir de las fechas de los registros
   List<DateTime> _fechas = [];
+
+  // ==========================================================================
+  // ⚙️ CICLO DE VIDA DEL WIDGET
+  // ==========================================================================
 
   @override
   void initState() {
     super.initState();
-
-    /// Al iniciar la pantalla se cargan los datos
+    // Al iniciar la pantalla, disparamos la carga de datos desde la base de datos local
     _cargarDatos();
   }
 
-  // ============================
-  // 📥 CARGA DE DATOS
-  // ============================
+  // ==========================================================================
+  // 📥 CARGA Y PROCESAMIENTO DE DATOS DESDE SQLITE
+  // ==========================================================================
 
-  /// Obtiene todos los registros desde la base de datos
-  /// y prepara la información para análisis.
-  ///
-  /// Flujo:
-  /// 1. Activa loading
-  /// 2. Consulta datos en SQLite
-  /// 3. Ordena registros (más antiguos → más recientes)
-  /// 4. Convierte fechas
-  /// 5. Calcula regresión
-  /// 6. Calcula predicciones
+  /// Consulta todos los registros almacenados en la base de datos local,
+  /// los ordena cronológicamente y ejecuta el análisis estadístico condicionado.
   Future<void> _cargarDatos() async {
-
+    // 1. Activamos el estado de carga visual
     setState(() {
       _isLoading = true;
     });
 
+    // 2. Consultamos la base de datos mediante el Singleton de DatabaseHelper
     final registros = await DatabaseHelper.instance.queryAllRegistros();
 
     setState(() {
-
-      /// Se invierte la lista para mantener orden cronológico
+      // 3. Invertimos la lista para llevar un orden cronológico (del día más antiguo al más reciente)
       _registros = registros.reversed.toList();
 
-      /// Conversión de fechas String → DateTime
+      // 4. Convertimos los Strings de fecha (ej. "2023-10-01") a objetos DateTime
       _fechas = _registros.map((r) {
         return DateTime.parse(r.fecha);
       }).toList();
 
-      /// Procesamiento de datos mediante el servicio
-      _regressionResult = _analyticsService.calcularRegresion(_registros);
-      _predicciones = _analyticsService.calcularPredicciones(
-        _registros,
-        _regressionResult!.pendiente,
-        _regressionResult!.intercepto,
-        7,
-      );
+      // 5. VALIDACIÓN DE FIABILIDAD: Verificamos si hay al menos 14 días registrados
+      if (_registros.length >= 14) {
+        // Si hay 14 o más días, calculamos la regresión lineal y el pronóstico a 7 días
+        _regressionResult = _analyticsService.calcularRegresion(_registros);
+        _predicciones = _analyticsService.calcularPredicciones(
+          _registros,
+          _regressionResult!.pendiente,
+          _regressionResult!.intercepto,
+          7, // 7 días de proyección futura
+        );
+      } else {
+        // Si hay menos de 14 días, dejamos los resultados de regresión vacíos
+        _regressionResult = null;
+        _predicciones = [];
+      }
 
+      // 6. Desactivamos el indicador de carga una vez procesado todo
       _isLoading = false;
     });
   }
 
-  // ============================
-  // 📈 MÉTODOS ELIMINADOS (Movidos al Servicio)
-  // ============================
-  // _calcularRegresion()
-  // _calcularPredicciones()
-  // _getR2()
+  // ==========================================================================
+  // 📍 GENERACIÓN DE PUNTOS (COORDINADAS) PARA FL_CHART
+  // ==========================================================================
 
-  // ============================
-  // 📍 GENERACIÓN DE PUNTOS (GRÁFICAS)
-  // ============================
-
-  /// Genera los puntos reales de producción para la gráfica principal.
-  ///
-  /// Cada punto representa:
-  /// - X → índice del día (tiempo)
-  /// - Y → litros producidos ese día
-  ///
-  /// Se utiliza en la línea azul (datos reales).
+  /// Convierte los registros reales de producción en puntos (FlSpot) para la gráfica.
+  /// Eje X: Índice del día (0, 1, 2...). Eje Y: Litros totales producidos.
   List<FlSpot> _generarPuntos() {
-
     List<FlSpot> puntos = [];
-
     for (int i = 0; i < _registros.length; i++) {
-
       double x = i.toDouble();
       double y = _registros[i].litrosTotal;
-
       puntos.add(FlSpot(x, y));
     }
-
     return puntos;
   }
 
-  /// Genera los puntos de la línea de tendencia (regresión lineal).
+  /// Calcula y genera los puntos para la línea de tendencia (regresión lineal).
+  /// Utiliza la ecuación de la recta: y = intercepto + pendiente * x.
   List<FlSpot> _generarLineaTendencia() {
-
     List<FlSpot> puntos = [];
-
     if (_regressionResult == null) return puntos;
 
     for (int i = 0; i < _registros.length; i++) {
-
       double x = i.toDouble();
-
-      /// Aplicación de la ecuación de regresión
       double y = _regressionResult!.intercepto + _regressionResult!.pendiente * i;
-
-      /// Se evita mostrar valores negativos
+      // Evitamos valores negativos en la tendencia gráfica
       puntos.add(FlSpot(x, y > 0 ? y : 0));
     }
-
     return puntos;
   }
 
-  /// Genera los puntos de predicción futura.
-  ///
-  /// Incluye:
-  /// - Datos actuales
-  /// - +7 días proyectados
-  ///
-  /// Se utiliza en la gráfica de proyección.
+  /// Genera los puntos para la gráfica de pronóstico de la próxima semana (+7 días).
   List<FlSpot> _generarPredicciones() {
-
     List<FlSpot> puntos = [];
-
     int n = _registros.length;
-
+    // Iteramos desde el día 0 hasta el total de días históricos + 7 días futuros
     for (int i = 0; i < n + 7; i++) {
-
       double x = i.toDouble();
       double y = _predicciones[i];
-
       puntos.add(FlSpot(x, y));
     }
-
     return puntos;
   }
 
-  // ============================
-  // 🧱 UI PRINCIPAL
-  // ============================
+  // ==========================================================================
+  // 🧱 CONSTRUCCIÓN DE LA VISTA PRINCIPAL (BUILD)
+  // ==========================================================================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
-      // ============================
-      // 📌 APP BAR
-      // ============================
-
-      /// Barra superior de la pantalla
       appBar: AppBar(
-        title: const Text('Análisis y Gráficas'),
-        backgroundColor: Colors.green,
+        title: const Text('Análisis y Tendencias'),
+        backgroundColor: AppTheme.primaryGreen,
       ),
-
-      // ============================
-      // 🎯 MANEJO DE ESTADOS
-      // ============================
-
       body: _isLoading
-
-      /// Estado de carga (mientras se consultan datos)
-          ? const Center(
-        child: CircularProgressIndicator(),
-      )
-
+          // Muestra un círculo de carga mientras se consultan los datos de SQLite
+          ? const Center(child: CircularProgressIndicator())
+          // Si no hay ningún registro en la base de datos, muestra la pantalla vacía
           : _registros.isEmpty
+              ? _buildEmptyState()
+              // Si hay datos, muestra el contenido organizado en scroll vertical
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // 1. Tarjeta superior con estadísticas clave (Promedio, Días, Mejor Día, Tendencia)
+                      _buildStatsCard(),
 
-      /// Estado vacío (sin datos suficientes)
-          ? _buildEmptyState()
+                      const SizedBox(height: 16),
 
-      /// Estado con datos → muestra contenido completo
-          : SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+                      // 2. Gráfica principal interactiva de producción diaria
+                      _buildChartCard(),
 
+                      const SizedBox(height: 16),
+
+                      // 3. CONDICIONAL DE REGISTROS:
+                      // Si hay menos de 14 días, muestra el aviso explicativo de días faltantes.
+                      // Si ya tiene 14 días o más, muestra el pronóstico y el resumen amigable.
+                      if (_registros.length < 14)
+                        _buildLockedProjectionsCard()
+                      else ...[
+                        _buildPredictionCard(),
+                        const SizedBox(height: 16),
+                        _buildSimpleInsightsCard(),
+                      ],
+                    ],
+                  ),
+                ),
+    );
+  }
+
+  // ==========================================================================
+  // ⚠️ COMPONENTE: ESTADO VACÍO (SIN DATOS)
+  // ==========================================================================
+
+  /// Pantalla amigable que guía al usuario cuando aún no ha registrado producción.
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-
-            /// Tarjeta de estadísticas generales
-            _buildStatsCard(),
-
+            const Icon(Icons.show_chart, size: 80, color: Colors.grey),
             const SizedBox(height: 16),
-
-            /// Gráfica principal (producción + tendencia)
-            _buildChartCard(),
-
-            const SizedBox(height: 16),
-
-            /// Gráfica de predicciones futuras
-            _buildPredictionCard(),
-
-            const SizedBox(height: 16),
-
-            /// Información detallada de regresión
-            _buildRegressionInfo(),
+            const Text(
+              'Aún no hay registros',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Comienza a registrar tu producción diaria\npara ver las gráficas y tendencias.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: AppTheme.textLight),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                // Navega directamente a la pantalla de registro diario
+                Navigator.pushNamed(context, '/registro');
+              },
+              child: const Text('Registrar Producción'),
+            ),
           ],
         ),
       ),
     );
   }
 
-  // ============================
-  // ⚠️ ESTADO VACÍO
-  // ============================
+  // ==========================================================================
+  // 🔒 COMPONENTE: TARJETA DE PROYECCIONES EN ESPERA (< 14 DÍAS)
+  // ==========================================================================
 
-  /// Widget que se muestra cuando no hay suficientes datos
-  /// para generar análisis o gráficas.
-  ///
-  /// Requiere mínimo 2 registros para calcular regresión.
-  Widget _buildEmptyState() {
-    return Center(
+  /// Explica claramente al productor por qué las proyecciones están bloqueadas
+  /// y cuántos días exactos le faltan para completarlos.
+  Widget _buildLockedProjectionsCard() {
+    int diasFaltantes = 14 - _registros.length;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.orange.shade300, width: 1.5),
+      ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
-          /// Ícono representativo
-          Icon(
-            Icons.show_chart,
-            size: 80,
-            color: Colors.grey.shade400,
+          Row(
+            children: [
+              Icon(Icons.lock_clock, color: Colors.orange.shade800, size: 30),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Pronósticos y Predicciones en Espera',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.orange),
+                ),
+              ),
+            ],
           ),
-
-          const SizedBox(height: 16),
-
-          /// Mensaje principal
+          const SizedBox(height: 12),
           Text(
-            'No hay datos suficientes',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey.shade600,
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          /// Mensaje secundario
-          Text(
-            'Registra al menos 2 días de producción\npara ver análisis y gráficas',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey.shade500),
-          ),
-
-          const SizedBox(height: 24),
-
-          // ============================
-          // 🔁 BOTÓN DE NAVEGACIÓN
-          // ============================
-
-          /// Botón que redirige al módulo de registro
-          ElevatedButton(
-            onPressed: () {
-
-              /// Navega a la pantalla de registro
-              Navigator.pushNamed(context, '/registro');
-            },
-
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-            ),
-
-            child: const Text('Ir a Registro'),
+            'Llevas ${_registros.length} de 14 días registrados.\n\n'
+            'Para asegurarte un pronóstico 100% confiable y ver hacia dónde va tu producción la próxima semana, necesitamos al menos 14 días de datos.\n\n'
+            '¡Te faltan $diasFaltantes ${diasFaltantes == 1 ? 'día' : 'días'} más de registro para desbloquearlo!',
+            style: const TextStyle(fontSize: 15, color: Colors.black87, height: 1.4),
           ),
         ],
       ),
     );
   }
-  // ============================
-  // 📊 TARJETA DE ESTADÍSTICAS
-  // ============================
 
-  /// Calcula y muestra métricas generales de producción:
-  /// - Total acumulado
-  /// - Promedio
-  /// - Número de días registrados
-  /// - Máximo y mínimo
-  /// - Tendencia (según la pendiente)
+  // ==========================================================================
+  // 📊 COMPONENTE: TARJETA DE ESTADÍSTICAS GENERALES
+  // ==========================================================================
+
+  /// Calcula métricas clave recorriendo la lista de registros:
+  /// - Promedio diario en litros
+  /// - Total de días registrados
+  /// - Producción máxima (Día Mejor)
+  /// - Estado general de la finca (Subiendo, Estable, Bajando)
   Widget _buildStatsCard() {
-
     double total = 0;
     double maximo = 0;
     double minimo = double.infinity;
 
-    /// Recorrido para calcular métricas
+    // Recorrido para calcular sumas y máximos/mínimos
     for (var r in _registros) {
       double litros = r.litrosTotal;
       total += litros;
-
       if (litros > maximo) maximo = litros;
       if (litros < minimo) minimo = litros;
     }
 
     double promedio = total / _registros.length;
-
-    /// Ajuste si no hay datos válidos
     if (minimo == double.infinity) minimo = 0;
 
+    // Determinamos el texto y color del estado de la finca según la pendiente
+    String tendenciaTexto = 'Estable ➔';
+    Color tendenciaColor = Colors.orange;
+    IconData tendenciaIcon = Icons.trending_flat;
+
+    if (_registros.length >= 14 && _regressionResult != null) {
+      if (_regressionResult!.pendiente > 0) {
+        tendenciaTexto = '¡Va Subiendo! 📈';
+        tendenciaColor = Colors.green;
+        tendenciaIcon = Icons.trending_up;
+      } else if (_regressionResult!.pendiente < 0) {
+        tendenciaTexto = 'Va Bajando 📉';
+        tendenciaColor = Colors.red;
+        tendenciaIcon = Icons.trending_down;
+      }
+    }
+
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
-
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
-            /// Título de la sección
             const Text(
-              'Estadísticas de Producción',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              'Resumen de tu Producción',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark),
             ),
-
             const SizedBox(height: 16),
-
-            // ============================
-            // 📌 FILA 1: TOTAL / PROMEDIO / DÍAS
-            // ============================
-
+            // Fila con los 3 indicadores principales (Promedio, Días, Mejor Día)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-
-                _buildStatItem(
-                  'Total',
-                  '${total.toStringAsFixed(1)} L',
-                  Icons.production_quantity_limits,
-                ),
-
-                _buildStatItem(
-                  'Promedio',
-                  '${promedio.toStringAsFixed(1)} L',
-                  Icons.trending_up,
-                ),
-
-                _buildStatItem(
-                  'Días',
-                  '${_registros.length}',
-                  Icons.calendar_today,
-                ),
+                _buildStatItem('Promedio Diario', '${promedio.toStringAsFixed(1)} L', Icons.water_drop, AppTheme.primaryGreen),
+                _buildStatItem('Días Anotados', '${_registros.length}', Icons.calendar_today, Colors.blue),
+                _buildStatItem('Día Mejor', '${maximo.toStringAsFixed(1)} L', Icons.star, Colors.amber),
               ],
             ),
-
-            const SizedBox(height: 12),
-
-            // ============================
-            // 📌 FILA 2: MAX / MIN / TENDENCIA
-            // ============================
-
+            const Divider(height: 24),
+            // Fila inferior con el estado actual de la tendencia
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-
-                _buildStatItem(
-                  'Máximo',
-                  '${maximo.toStringAsFixed(1)} L',
-                  Icons.arrow_upward,
-                ),
-
-                _buildStatItem(
-                  'Mínimo',
-                  '${minimo.toStringAsFixed(1)} L',
-                  Icons.arrow_downward,
-                ),
-
-                /// Indicador de tendencia basado en la pendiente
-                _buildStatItem(
-                  'Tendencia',
-
-                  (_regressionResult?.pendiente ?? 0) > 0
-                      ? '↑ Positiva'
-                      : ((_regressionResult?.pendiente ?? 0) < 0 ? '↓ Negativa' : '→ Estable'),
-
-                  (_regressionResult?.pendiente ?? 0) > 0
-                      ? Icons.trending_up
-                      : ((_regressionResult?.pendiente ?? 0) < 0
-                      ? Icons.trending_down
-                      : Icons.trending_flat),
-
-                  color: (_regressionResult?.pendiente ?? 0) > 0
-                      ? Colors.green
-                      : ((_regressionResult?.pendiente ?? 0) < 0 ? Colors.red : Colors.orange),
+                const Text('Estado actual de la finca:', style: TextStyle(fontSize: 15, color: AppTheme.textLight)),
+                Row(
+                  children: [
+                    Icon(tendenciaIcon, color: tendenciaColor),
+                    const SizedBox(width: 6),
+                    Text(
+                      tendenciaTexto,
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: tendenciaColor),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -443,137 +367,99 @@ class _GraficasScreenState extends State<GraficasScreen> {
     );
   }
 
-  // ============================
-  // 🧩 ITEM DE ESTADÍSTICA
-  // ============================
-
-  /// Componente reutilizable para mostrar una métrica individual.
-  ///
-  /// Parámetros:
-  /// - label → nombre del indicador
-  /// - value → valor calculado
-  /// - icon → ícono representativo
-  /// - color → color opcional
-  Widget _buildStatItem(
-      String label,
-      String value,
-      IconData icon, {
-        Color color = Colors.green,
-      }) {
+  /// Widget auxiliar para construir cada celda individual de estadística.
+  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
     return Column(
       children: [
-
         Icon(icon, color: color, size: 28),
-
-        const SizedBox(height: 8),
-
-        /// Valor principal
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-
-        /// Etiqueta
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-          ),
-        ),
+        const SizedBox(height: 6),
+        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
+        Text(label, style: const TextStyle(fontSize: 12, color: AppTheme.textLight)),
       ],
     );
   }
 
-  // ============================
-  // 📈 GRÁFICA PRINCIPAL
-  // ============================
+  // ==========================================================================
+  // 📈 COMPONENTE: GRÁFICA DE PRODUCCIÓN DIARIA
+  // ==========================================================================
 
-  /// Muestra:
-  /// - Línea azul → datos reales
-  /// - Línea verde → tendencia (regresión)
+  /// Construye la gráfica principal de líneas (LineChart) que muestra:
+  /// - Línea azul: Producción real de cada día.
+  /// - Línea verde (punteada): Tendencia de regresión lineal (solo cuando hay >= 14 días).
+  /// Configurada con ejes limpios y espaciado de fechas optimizado para evitar superposiciones.
   Widget _buildChartCard() {
+    // Calculamos un intervalo dinámico para las fechas si hay muchos registros
+    double intervalX = _registros.length > 10 ? 2 : 1;
 
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
-
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             const Text(
-              'Producción Diaria',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              'Tus Registros Día a Día',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark),
             ),
-
-            const SizedBox(height: 8),
-
-            /// Leyenda de la gráfica
+            const SizedBox(height: 6),
             Text(
-              'Línea azul: Producción real | Línea verde: Tendencia',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              _registros.length >= 14
+                  ? '🔵 Línea azul: Tu producción real  |  🟢 Línea verde: Hacia dónde vas'
+                  : '🔵 Línea azul: Litros producidos cada día',
+              style: const TextStyle(fontSize: 12, color: AppTheme.textLight),
             ),
-
-            const SizedBox(height: 16),
-
+            const SizedBox(height: 20),
             SizedBox(
               height: 300,
-
               child: LineChart(
                 LineChartData(
-
-                  /// Cuadrícula
                   gridData: const FlGridData(show: true),
-
-                  // ============================
-                  // 📅 EJE X (FECHAS)
-                  // ============================
-
                   titlesData: FlTitlesData(
+                    // Ocultamos títulos superiores y derechos para evitar saturación visual
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    // Eje izquierdo: Muestra los litros producidos con espacio reservado
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 45,
+                        interval: 1,
+                        getTitlesWidget: (value, meta) {
+                          return Text(
+                            value.toInt().toString(),
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
+                          );
+                        },
+                      ),
+                    ),
+                    // Eje inferior: Muestra las fechas formateadas (ej. 06/10)
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        interval: 1,
-
-                        /// Formato de fechas en el eje X
+                        interval: intervalX,
                         getTitlesWidget: (value, meta) {
-
                           int index = value.toInt();
-
-                          if (index < 0 || index >= _fechas.length) {
-                            return Container();
+                          if (index < 0 || index >= _fechas.length) return Container();
+                          // Evitamos amontonar fechas aplicando el intervalo calculados
+                          if (index % intervalX.toInt() != 0 && index != _fechas.length - 1) {
+                            return const SizedBox.shrink();
                           }
-
-                          String fecha = DateFormat('dd/MM')
-                              .format(_fechas[index]);
-
-                          return Text(
-                            fecha,
-                            style: const TextStyle(fontSize: 10),
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              DateFormat('dd/MM').format(_fechas[index]),
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
                           );
                         },
                       ),
                     ),
                   ),
-
                   borderData: FlBorderData(show: true),
-
-                  // ============================
-                  // 📊 LÍNEAS DE LA GRÁFICA
-                  // ============================
-
                   lineBarsData: [
-
-                    /// Línea de datos reales
+                    // 1. Línea de datos reales (Azul)
                     LineChartBarData(
                       spots: _generarPuntos(),
                       isCurved: true,
@@ -581,18 +467,16 @@ class _GraficasScreenState extends State<GraficasScreen> {
                       color: Colors.blue,
                       dotData: const FlDotData(show: true),
                     ),
-
-                    /// Línea de tendencia (regresión)
-                    LineChartBarData(
-                      spots: _generarLineaTendencia(),
-                      isCurved: false,
-                      barWidth: 2,
-                      color: Colors.green,
-                      dotData: const FlDotData(show: false),
-
-                      /// Línea punteada
-                      dashArray: [5, 5],
-                    ),
+                    // 2. Línea de tendencia de regresión (Verde punteada - solo si hay >= 14 días)
+                    if (_registros.length >= 14)
+                      LineChartBarData(
+                        spots: _generarLineaTendencia(),
+                        isCurved: false,
+                        barWidth: 2,
+                        color: Colors.green,
+                        dotData: const FlDotData(show: false),
+                        dashArray: [5, 5],
+                      ),
                   ],
                 ),
               ),
@@ -603,53 +487,84 @@ class _GraficasScreenState extends State<GraficasScreen> {
     );
   }
 
-  // ============================
-  // 🔮 GRÁFICA DE PREDICCIÓN
-  // ============================
+  // ==========================================================================
+  // 🔮 COMPONENTE: GRÁFICA DE PRONÓSTICO (PRÓXIMA SEMANA)
+  // ==========================================================================
 
-  /// Muestra la proyección de producción a 7 días
-  /// basada en la regresión lineal.
+  /// Muestra una segunda gráfica de líneas (Naranja) con la proyección estimada
+  /// para los próximos 7 días basada en el modelo de regresión lineal.
   Widget _buildPredictionCard() {
-
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
-
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
+            const Row(
+              children: [
+                Icon(Icons.trending_up, color: Colors.orange, size: 28),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Pronóstico para la Próxima Semana',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
             const Text(
-              'Proyección a 7 Días',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              'Estimación de cuánta leche producirás en los próximos 7 días',
+              style: TextStyle(fontSize: 12, color: AppTheme.textLight),
             ),
-
-            const SizedBox(height: 8),
-
-            Text(
-              'Estimación de producción basada en tendencia histórica',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-            ),
-
-            const SizedBox(height: 16),
-
+            const SizedBox(height: 20),
             SizedBox(
-              height: 250,
-
+              height: 280,
               child: LineChart(
                 LineChartData(
                   gridData: const FlGridData(show: true),
-                  titlesData: const FlTitlesData(show: true),
+                  titlesData: FlTitlesData(
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 45,
+                        interval: 1,
+                        getTitlesWidget: (value, meta) {
+                          return Text(
+                            value.toInt().toString(),
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
+                          );
+                        },
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        interval: 7,
+                        getTitlesWidget: (value, meta) {
+                          int day = value.toInt();
+                          int totalDays = _registros.length + 7;
+                          // Omitimos el penúltimo día si está muy cerca del final para evitar solapamiento
+                          if (day == totalDays - 2) {
+                            return const SizedBox.shrink();
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              'Día $day',
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
                   borderData: FlBorderData(show: true),
-
                   lineBarsData: [
-
-                    /// Línea de predicción
                     LineChartBarData(
                       spots: _generarPredicciones(),
                       isCurved: true,
@@ -667,109 +582,61 @@ class _GraficasScreenState extends State<GraficasScreen> {
     );
   }
 
-  // ============================
-  // 🧠 INFORMACIÓN DE REGRESIÓN
-  // ============================
+  // ==========================================================================
+  // 💡 COMPONENTE: CONCLUSIONES Y PRONÓSTICO PARA MAÑANA
+  // ==========================================================================
 
-  /// Muestra información matemática del modelo:
-  Widget _buildRegressionInfo() {
-
-    double pendiente = _regressionResult?.pendiente ?? 0;
-    double intercepto = _regressionResult?.intercepto ?? 0;
+  /// Traduce los resultados matemáticos complejos en conclusiones sencillas:
+  /// - Producción estimada en litros para el día siguiente.
+  /// - Porcentaje de confiabilidad del pronóstico basado en el coeficiente R².
+  Widget _buildSimpleInsightsCard() {
     double r2 = _regressionResult?.r2 ?? 0;
+    // Extraemos la predicción para el día siguiente (índice inmediato posterior al último registro real)
+    String produccionManana = _predicciones.length > _registros.length
+        ? _predicciones[_registros.length].toStringAsFixed(1)
+        : '0.0';
 
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
-
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             const Text(
-              'Información de Regresión',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              '¿Qué dicen tus datos?',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark),
             ),
-
-            const SizedBox(height: 12),
-
-            _buildInfoRow('Pendiente:', pendiente.toStringAsFixed(3)),
-
-            const SizedBox(height: 8),
-
-            _buildInfoRow('Intercepto:', intercepto.toStringAsFixed(1)),
-
-            const SizedBox(height: 8),
-
-            _buildInfoRow(
-              'R² (Coef. Determinación):',
-              '${(r2 * 100).toStringAsFixed(1)}%',
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(Icons.wb_sunny, color: Colors.amber, size: 26),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Producción estimada para mañana: $produccionManana Litros',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                  ),
+                ),
+              ],
             ),
-
             const SizedBox(height: 12),
-
-            // ============================
-            // 📊 INTERPRETACIÓN
-            // ============================
-
-            if (pendiente > 0)
-              const Text(
-                '📈 La producción está en aumento',
-                style: TextStyle(color: Colors.green),
-              )
-            else if (pendiente < 0)
-              const Text(
-                '📉 La producción está en disminución',
-                style: TextStyle(color: Colors.red),
-              )
-            else
-              const Text(
-                '📊 La producción se mantiene estable',
-                style: TextStyle(color: Colors.orange),
-              ),
-
-            const SizedBox(height: 8),
-
-            /// Predicción del siguiente día
-            if (_predicciones.length > _registros.length)
-              Text(
-                '📅 Producción estimada para mañana: ${_predicciones[_registros.length].toStringAsFixed(1)} litros',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
+            Row(
+              children: [
+                const Icon(Icons.verified, color: AppTheme.primaryGreen, size: 26),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Confiabilidad del pronóstico: ${(r2 * 100).toStringAsFixed(0)}%',
+                    style: const TextStyle(fontSize: 15, color: AppTheme.textLight),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
-    );
-  }
-
-  // ============================
-  // 📄 FILA DE INFORMACIÓN
-  // ============================
-
-  /// Componente reutilizable para mostrar pares clave-valor.
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-
-        Text(
-          label,
-          style: const TextStyle(fontSize: 14, color: Colors.grey),
-        ),
-
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
     );
   }
 }
