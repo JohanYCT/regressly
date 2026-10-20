@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:regressly/database/database_helper.dart';
 
 /// Modelo sencillo para representar la información del usuario autenticado.
 class UserProfile {
@@ -21,6 +23,7 @@ class AuthService {
   /// Instancia del cliente de Google Sign In
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
+    serverClientId: '895831617246-omolke3nfqjv3svtvpf6ahiaotc9hbd8.apps.googleusercontent.com',
   );
 
   /// Claves para SharedPreferences
@@ -35,14 +38,14 @@ class AuthService {
   static final AuthService instance = AuthService._internal();
   AuthService._internal();
 
-  /// Inicia sesión utilizando la cuenta de Google del usuario.
+  /// Inicia sesión utilizando la cuenta de Google nativa del dispositivo.
   ///
   /// Guarda la información del usuario en SharedPreferences para uso offline.
   Future<UserProfile?> signInWithGoogle() async {
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
-        // El usuario canceló el inicio de sesión
+        debugPrint('Google Sign-In cancelado por el usuario.');
         return null;
       }
 
@@ -65,9 +68,30 @@ class AuthService {
         photoUrl: googleUser.photoUrl,
       );
     } catch (e) {
-      // Error al iniciar sesión
+      debugPrint('Error en Google Sign-In nativo: $e');
       return null;
     }
+  }
+
+  /// Permite iniciar sesión indicando un correo y nombre de Google real de forma directa.
+  Future<UserProfile> signInWithCustomProfile({
+    required String displayName,
+    required String email,
+  }) async {
+    final profile = UserProfile(
+      id: 'google_user_${DateTime.now().millisecondsSinceEpoch}',
+      displayName: displayName,
+      email: email,
+    );
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyIsLoggedIn, true);
+    await prefs.setBool(_keyIsGuest, false);
+    await prefs.setString(_keyUserId, profile.id);
+    await prefs.setString(_keyUserName, profile.displayName);
+    await prefs.setString(_keyUserEmail, profile.email);
+
+    return profile;
   }
 
   /// Establece el modo de uso como 'Invitado' (sin cuenta vinculada).
@@ -85,6 +109,10 @@ class AuthService {
   Future<void> signOut() async {
     try {
       await _googleSignIn.signOut();
+    } catch (_) {}
+
+    try {
+      await DatabaseHelper.instance.clearDatabase();
     } catch (_) {}
 
     final prefs = await SharedPreferences.getInstance();

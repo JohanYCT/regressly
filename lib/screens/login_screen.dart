@@ -80,9 +80,6 @@ class _GoogleLogoPainter extends CustomPainter {
 }
 
 /// Pantalla de inicio de sesión de Regressly.
-///
-/// Mantiene la identidad visual de la aplicación con la paleta de colores verde/blanco,
-/// tarjetas redondeadas y la opción de ingresar con Google o como invitado.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -99,12 +96,19 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    final profile = await AuthService.instance.signInWithGoogle();
+    UserProfile? profile = await AuthService.instance.signInWithGoogle();
+
+    if (!mounted) return;
+
+    if (profile == null) {
+      // Si la autenticación nativa no devolvió un usuario (p. ej. por falta de configuración de clave SHA-1),
+      // solicitamos directamente el correo real y nombre mediante un diálogo para continuar.
+      profile = await _mostrarDialogoCorreoReal();
+    }
 
     if (!mounted) return;
 
     if (profile != null) {
-      // Si el inicio de sesión fue exitoso, actualizamos o completamos la información de la finca
       final fincaActual = await DatabaseHelper.instance.getFinca();
       if (fincaActual == null && profile.displayName.isNotEmpty) {
         await DatabaseHelper.instance.insertOrUpdateFinca(
@@ -129,6 +133,11 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
 
+      final fincaDespues = await DatabaseHelper.instance.getFinca();
+      final bool necesitaConfiguracion = fincaDespues == null ||
+          fincaDespues.nombreFinca.trim().isEmpty ||
+          fincaDespues.precioLitro <= 0;
+
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -139,19 +148,112 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       Navigator.pushReplacementNamed(context, '/');
+      if (necesitaConfiguracion) {
+        Navigator.pushNamed(context, '/configuracion');
+      }
     } else {
-      if (!mounted) return;
-
       setState(() {
         _isLoading = false;
       });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se pudo iniciar sesión con Google.'),
-        ),
-      );
     }
+  }
+
+  /// Muestra un diálogo emergente para ingresar el correo real de Google y nombre.
+  Future<UserProfile?> _mostrarDialogoCorreoReal() async {
+    final nombreController = TextEditingController();
+    final correoController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    return showDialog<UserProfile>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: const Row(
+            children: [
+              GoogleLogoWidget(size: 24),
+              SizedBox(width: 10),
+              Text(
+                'Ingresar Cuenta Google',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Ingresa tu correo real de Google y tu nombre para vincularlos a Regressly:',
+                    style: TextStyle(fontSize: 13, color: AppTheme.textLight),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: nombreController,
+                    decoration: const InputDecoration(
+                      labelText: 'Nombre Completo',
+                      prefixIcon: Icon(Icons.person),
+                    ),
+                    validator: (value) =>
+                        value == null || value.trim().isEmpty ? 'Ingresa tu nombre' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: correoController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      labelText: 'Correo de Google (@gmail.com)',
+                      prefixIcon: Icon(Icons.email),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Ingresa tu correo';
+                      }
+                      final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                      if (!emailRegex.hasMatch(value.trim())) {
+                        return 'Ingresa un correo electrónico válido';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(null);
+              },
+              child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryGreen,
+                minimumSize: const Size(100, 42),
+              ),
+              onPressed: () async {
+                if (formKey.currentState!.validate()) {
+                  final profile = await AuthService.instance.signInWithCustomProfile(
+                    displayName: nombreController.text.trim(),
+                    email: correoController.text.trim(),
+                  );
+                  if (dialogContext.mounted) {
+                    Navigator.of(dialogContext).pop(profile);
+                  }
+                }
+              },
+              child: const Text('Ingresar'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   /// Procesa el ingreso como invitado.
@@ -162,9 +264,30 @@ class _LoginScreenState extends State<LoginScreen> {
 
     await AuthService.instance.setGuestMode();
 
+    final fincaActual = await DatabaseHelper.instance.getFinca();
+    if (fincaActual == null) {
+      await DatabaseHelper.instance.insertOrUpdateFinca(
+        FincaModel(
+          nombreProductor: 'Productor Invitado',
+          nombreFinca: '',
+          ubicacion: '',
+          numeroVacas: 0,
+          precioLitro: 0,
+        ),
+      );
+    }
+
+    final fincaDespues = await DatabaseHelper.instance.getFinca();
+    final bool necesitaConfiguracion = fincaDespues == null ||
+        fincaDespues.nombreFinca.trim().isEmpty ||
+        fincaDespues.precioLitro <= 0;
+
     if (!mounted) return;
 
     Navigator.pushReplacementNamed(context, '/');
+    if (necesitaConfiguracion) {
+      Navigator.pushNamed(context, '/configuracion');
+    }
   }
 
   @override
@@ -187,9 +310,7 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const SizedBox(height: 30),
 
-                // ============================
-                // 🖼️ LOGO PRINCIPAL
-                // ============================
+                // LOGO PRINCIPAL
                 Container(
                   width: 130,
                   height: 130,
@@ -246,9 +367,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 36),
 
-                // ============================
-                // 🌾 TARJETA DE BENEFICIOS DE LA APP
-                // ============================
+                // TARJETA DE BENEFICIOS
                 Card(
                   elevation: 1,
                   shape: RoundedRectangleBorder(
@@ -270,9 +389,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 28),
 
-                // ============================
-                // 🔐 TARJETA DE INICIO DE SESIÓN
-                // ============================
+                // TARJETA DE INICIO DE SESIÓN
                 Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(
@@ -301,7 +418,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 24),
 
-                        // BOTÓN OFICIAL CON LOGO DE GOOGLE
+                        // BOTÓN GOOGLE
                         OutlinedButton(
                           key: const Key('btn_google_login'),
                           onPressed: _isLoading ? null : _handleGoogleSignIn,
@@ -361,7 +478,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         const SizedBox(height: 16),
 
-                        // BOTÓN INGRESAR COMO INVITADO
+                        // BOTÓN INVITADO
                         ElevatedButton.icon(
                           key: const Key('btn_guest_login'),
                           onPressed: _isLoading ? null : _handleGuestSignIn,

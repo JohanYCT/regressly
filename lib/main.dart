@@ -21,8 +21,13 @@ void main() async {
   // Asegura la inicialización previa de los bindings de Flutter
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Verifica si el usuario ya tiene sesión activa o seleccionó modo invitado previamente
-  final hasSession = await AuthService.instance.hasSession();
+  bool hasSession = false;
+  try {
+    // Verifica si el usuario ya tiene sesión activa o seleccionó modo invitado previamente
+    hasSession = await AuthService.instance.hasSession();
+  } catch (e) {
+    debugPrint('Error al verificar sesión inicial: $e');
+  }
 
   // runApp ejecuta la aplicación y recibe el widget principal (MyApp)
   runApp(MyApp(hasSession: hasSession));

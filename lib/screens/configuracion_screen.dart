@@ -41,7 +41,6 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
 
   /// Datos de la sesión actual
   UserProfile? _userProfile;
-  bool _isGuestMode = false;
 
   @override
   void initState() {
@@ -55,7 +54,6 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
 
   Future<void> _cargarConfiguracion() async {
     final profile = await AuthService.instance.getUserProfile();
-    final isGuest = await AuthService.instance.isGuest();
 
     final finca = await DatabaseHelper.instance.getFinca();
 
@@ -72,11 +70,12 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
       _nombreProductorController.text = profile.displayName;
     }
 
-    setState(() {
-      _userProfile = profile;
-      _isGuestMode = isGuest;
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _userProfile = profile;
+        _isLoading = false;
+      });
+    }
   }
 
   // ============================
@@ -99,16 +98,25 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
 
       await DatabaseHelper.instance.insertOrUpdateFinca(finca);
 
+      if (!mounted) return;
+
       setState(() {
         _isSaving = false;
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Configuración guardada exitosamente'),
-          ),
-        );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Configuración guardada exitosamente'),
+        ),
+      );
+
+      // Si se ingresó a Configuración tras iniciar sesión, regresa suavemente al Home tras guardar
+      if (Navigator.canPop(context)) {
+        Future.delayed(const Duration(milliseconds: 600), () {
+          if (mounted && Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+        });
       }
     }
   }
@@ -132,7 +140,6 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
       }
       setState(() {
         _userProfile = profile;
-        _isGuestMode = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

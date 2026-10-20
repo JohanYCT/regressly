@@ -54,7 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ? const Icon(Icons.person, size: 18, color: AppTheme.primaryGreen)
                   : null,
             ),
-            tooltip: _userProfile != null ? _userProfile!.displayName : 'Cuenta',
+            tooltip: _userProfile != null ? _userProfile!.displayName : 'Modo Invitado',
             onPressed: () {
               Navigator.pushNamed(context, '/configuracion').then((_) => _loadUserProfile());
             },

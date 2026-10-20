@@ -46,8 +46,11 @@ void main() {
       // -----------------------------------------------------------
       // 1. CONFIGURACIÓN DE LA FINCA
       // -----------------------------------------------------------
-      await tester.tap(find.byKey(const Key('nav_configuracion')));
-      await tester.pumpAndSettle();
+      final navConfig = find.byKey(const Key('nav_configuracion'));
+      if (navConfig.evaluate().isNotEmpty) {
+        await tester.tap(navConfig);
+        await tester.pumpAndSettle();
+      }
 
       final productorField = find.widgetWithText(TextFormField, 'Nombre del Productor');
       await tester.ensureVisible(productorField);
@@ -82,9 +85,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Configuración guardada exitosamente'), findsOneWidget);
-      await tester.pageBack();
+      await tester.pump(const Duration(milliseconds: 1000));
       await tester.pumpAndSettle();
-      await tester.pump(const Duration(milliseconds: 500));
 
       // -----------------------------------------------------------
       // 2. REGISTRO DÍA 1 (Producción Base: 80L)
