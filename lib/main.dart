@@ -10,20 +10,35 @@ import 'package:regressly/screens/home_screen.dart';
 import 'package:regressly/screens/registro_screen.dart';
 import 'package:regressly/screens/configuracion_screen.dart';
 import 'package:regressly/screens/graficas_screen.dart';
+import 'package:regressly/screens/login_screen.dart';
+
+// Importa el servicio de autenticación
+import 'package:regressly/services/auth_service.dart';
 
 // Función principal del programa (punto de entrada de la app)
 // Aquí es donde inicia toda la aplicación Flutter
-void main() {
+void main() async {
+  // Asegura la inicialización previa de los bindings de Flutter
+  WidgetsFlutterBinding.ensureInitialized();
+
+  bool hasSession = false;
+  try {
+    // Verifica si el usuario ya tiene sesión activa o seleccionó modo invitado previamente
+    hasSession = await AuthService.instance.hasSession();
+  } catch (e) {
+    debugPrint('Error al verificar sesión inicial: $e');
+  }
+
   // runApp ejecuta la aplicación y recibe el widget principal (MyApp)
-  runApp(const MyApp());
+  runApp(MyApp(hasSession: hasSession));
 }
 
 // Clase principal de la aplicación
-// StatelessWidget significa que este widget NO cambia su estado dinámicamente
 class MyApp extends StatelessWidget {
+  final bool hasSession;
 
-  // Constructor de la clase (const mejora rendimiento)
-  const MyApp({super.key});
+  // Constructor de la clase
+  const MyApp({super.key, this.hasSession = false});
 
   // Método build: construye toda la interfaz visual de la app
   @override
@@ -41,11 +56,14 @@ class MyApp extends StatelessWidget {
       // Oculta la etiqueta de "DEBUG" en la esquina de la app
       debugShowCheckedModeBanner: false,
 
-      // Ruta inicial (pantalla que se abre al iniciar la app)
-      initialRoute: '/',
+      // Ruta inicial (si ya tiene sesión va a Home, de lo contrario va a Login)
+      initialRoute: hasSession ? '/' : '/login',
 
       // Definición de rutas (navegación entre pantallas)
       routes: {
+
+        // Pantalla de inicio de sesión
+        '/login': (context) => const LoginScreen(),
 
         // Pantalla principal (Home)
         '/': (context) => const HomeScreen(),

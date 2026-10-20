@@ -1,8 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:regressly/main.dart' as app;
 import 'package:regressly/database/database_helper.dart';
+import 'package:regressly/services/auth_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -10,6 +14,12 @@ void main() {
   group('End-to-End (E2E) Test', () {
     
     setUpAll(() async {
+      if (!kIsWeb) {
+        sqfliteFfiInit();
+        databaseFactory = databaseFactoryFfi;
+      }
+      SharedPreferences.setMockInitialValues({});
+      await AuthService.instance.setGuestMode();
       // Limpiar la base de datos antes de empezar el test E2E
       await DatabaseHelper.instance.clearDatabase();
     });
@@ -17,6 +27,13 @@ void main() {
     testWidgets('Complete User Journey: Setup, 3-Day Entry, and Trend Verification', (tester) async {
       app.main();
       await tester.pumpAndSettle();
+
+      // Si aparece la pantalla de login, hace tap en Continuar como invitado
+      final btnGuest = find.byKey(const Key('btn_guest_login'));
+      if (btnGuest.evaluate().isNotEmpty) {
+        await tester.tap(btnGuest);
+        await tester.pumpAndSettle();
+      }
 
       // Helper para cerrar el teclado de forma robusta en cualquier dispositivo
       Future<void> hideKeyboard() async {
@@ -29,8 +46,11 @@ void main() {
       // -----------------------------------------------------------
       // 1. CONFIGURACIÓN DE LA FINCA
       // -----------------------------------------------------------
-      await tester.tap(find.byKey(const Key('nav_configuracion')));
-      await tester.pumpAndSettle();
+      final navConfig = find.byKey(const Key('nav_configuracion'));
+      if (navConfig.evaluate().isNotEmpty) {
+        await tester.tap(navConfig);
+        await tester.pumpAndSettle();
+      }
 
       final productorField = find.widgetWithText(TextFormField, 'Nombre del Productor');
       await tester.ensureVisible(productorField);
@@ -65,9 +85,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Configuración guardada exitosamente'), findsOneWidget);
-      await tester.pageBack();
+      await tester.pump(const Duration(milliseconds: 1000));
       await tester.pumpAndSettle();
-      await tester.pump(const Duration(milliseconds: 500));
 
       // -----------------------------------------------------------
       // 2. REGISTRO DÍA 1 (Producción Base: 80L)
