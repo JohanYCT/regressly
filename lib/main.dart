@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 // Importa el archivo donde defines los estilos (colores, temas, etc.)
 import 'package:regressly/app_theme.dart';
@@ -23,6 +24,13 @@ import 'package:regressly/services/auth_service.dart';
 void main() async {
   // Asegura la inicialización previa de los bindings de Flutter
   WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    // Inicializar formato de fechas en español
+    await initializeDateFormatting('es_ES', null);
+  } catch (e) {
+    debugPrint('Error al inicializar date formatting: $e');
+  }
 
   try {
     // Inicializar Firebase

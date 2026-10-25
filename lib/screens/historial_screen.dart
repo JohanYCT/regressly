@@ -673,9 +673,11 @@ class _HistorialScreenState extends State<HistorialScreen> {
         ? DateFormat('EEEE d "de" MMMM, yyyy', 'es_ES').format(parsedDate)
         : registro.fecha;
 
-    final total = registro.litrosTotal > 0 ? registro.litrosTotal : 1.0;
-    final pctManana = (registro.litrosManana / total).clamp(0.0, 1.0);
-    final pctTarde = (registro.litrosTarde / total).clamp(0.0, 1.0);
+    final int flexManana = (registro.litrosManana * 100).round();
+    final int flexTarde = (registro.litrosTarde * 100).round();
+    final int sumFlex = flexManana + flexTarde;
+    final int safeFlexManana = sumFlex > 0 ? flexManana : 1;
+    final int safeFlexTarde = sumFlex > 0 ? flexTarde : 1;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -841,11 +843,11 @@ class _HistorialScreenState extends State<HistorialScreen> {
                 child: Row(
                   children: [
                     Expanded(
-                      flex: (pctManana * 100).round(),
+                      flex: safeFlexManana,
                       child: Container(color: Colors.orange.shade400),
                     ),
                     Expanded(
-                      flex: (pctTarde * 100).round(),
+                      flex: safeFlexTarde,
                       child: Container(color: Colors.indigo.shade400),
                     ),
                   ],
