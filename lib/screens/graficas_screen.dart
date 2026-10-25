@@ -425,7 +425,6 @@ class _GraficasScreenState extends State<GraficasScreen> {
                       sideTitles: SideTitles(
                         showTitles: true,
                         reservedSize: 45,
-                        interval: 1,
                         getTitlesWidget: (value, meta) {
                           return Text(
                             value.toInt().toString(),
@@ -532,7 +531,6 @@ class _GraficasScreenState extends State<GraficasScreen> {
                       sideTitles: SideTitles(
                         showTitles: true,
                         reservedSize: 45,
-                        interval: 1,
                         getTitlesWidget: (value, meta) {
                           return Text(
                             value.toInt().toString(),
