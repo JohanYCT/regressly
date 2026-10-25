@@ -1,5 +1,7 @@
-// Importa la librería principal de Flutter para construir interfaces visuales
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 
 // Importa el archivo donde defines los estilos (colores, temas, etc.)
 import 'package:regressly/app_theme.dart';
@@ -10,6 +12,7 @@ import 'package:regressly/screens/home_screen.dart';
 import 'package:regressly/screens/registro_screen.dart';
 import 'package:regressly/screens/configuracion_screen.dart';
 import 'package:regressly/screens/graficas_screen.dart';
+import 'package:regressly/screens/historial_screen.dart';
 import 'package:regressly/screens/login_screen.dart';
 
 // Importa el servicio de autenticación
@@ -20,6 +23,20 @@ import 'package:regressly/services/auth_service.dart';
 void main() async {
   // Asegura la inicialización previa de los bindings de Flutter
   WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    // Inicializar Firebase
+    await Firebase.initializeApp();
+
+    // Inicializar Firebase App Check
+    await FirebaseAppCheck.instance.activate(
+      androidProvider: kDebugMode
+          ? AndroidProvider.debug
+          : AndroidProvider.playIntegrity,
+    );
+  } catch (e) {
+    debugPrint('Error al inicializar Firebase/App Check: $e');
+  }
 
   bool hasSession = false;
   try {
@@ -79,6 +96,9 @@ class MyApp extends StatelessWidget {
 
         // Pantalla de estimaciones financieras $
         '/calculo': (context) => const FinancieroScreen(),
+
+        // Pantalla de historial de producción y reporte PDF
+        '/historial': (context) => const HistorialScreen(),
       },
     );
   }
