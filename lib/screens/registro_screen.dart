@@ -131,6 +131,21 @@ class _RegistroScreenState extends State<RegistroScreen> {
     }
   }
 
+  /// Valida que la entrada sea un número válido (soporta comas y puntos) y no sea negativo.
+  String? _validarLitros(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Requerido';
+    }
+    final parsed = double.tryParse(value.trim().replaceAll(',', '.'));
+    if (parsed == null) {
+      return 'Número no válido';
+    }
+    if (parsed < 0) {
+      return 'Debe ser ≥ 0';
+    }
+    return null;
+  }
+
   // ============================
   // 💾 GUARDAR / ACTUALIZAR REGISTRO
   // ============================
@@ -152,9 +167,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
         _isLoading = true;
       });
 
-      /// Conversión de texto a números
-      final double litrosManana = double.tryParse(_litrosMananaController.text) ?? 0;
-      final double litrosTarde = double.tryParse(_litrosTardeController.text) ?? 0;
+      /// Conversión de texto a números (soporta comas decimales)
+      final double litrosManana = double.tryParse(_litrosMananaController.text.trim().replaceAll(',', '.')) ?? 0;
+      final double litrosTarde = double.tryParse(_litrosTardeController.text.trim().replaceAll(',', '.')) ?? 0;
 
       /// Cálculo del total diario
       final double litrosTotal = litrosManana + litrosTarde;
@@ -309,10 +324,10 @@ class _RegistroScreenState extends State<RegistroScreen> {
                               ),
 
                               /// Tipo de teclado numérico
-                              keyboardType: TextInputType.number,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
 
                               /// Validación obligatoria
-                              validator: (value) => value!.isEmpty ? 'Requerido' : null,
+                              validator: _validarLitros,
                             ),
                           ),
 
@@ -329,8 +344,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
                                 suffixText: 'L',
                               ),
 
-                              keyboardType: TextInputType.number,
-                              validator: (value) => value!.isEmpty ? 'Requerido' : null,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              validator: _validarLitros,
                             ),
                           ),
                         ],
@@ -361,7 +376,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
 
                             /// Cálculo dinámico del total de litros
                             Text(
-                              '${(double.tryParse(_litrosMananaController.text) ?? 0) + (double.tryParse(_litrosTardeController.text) ?? 0)} Litros',
+                              '${((double.tryParse(_litrosMananaController.text.trim().replaceAll(',', '.')) ?? 0) + (double.tryParse(_litrosTardeController.text.trim().replaceAll(',', '.')) ?? 0)).toStringAsFixed(1)} Litros',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: AppTheme.primaryGreen,

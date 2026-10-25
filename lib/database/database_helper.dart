@@ -142,13 +142,18 @@ class DatabaseHelper {
   // =====================================================
 
   /// Inserta un nuevo registro de producción.
-  ///
+  /// Inserta un nuevo registro de producción.
+  /// Usa ConflictAlgorithm.replace para actualizar transparentemente si la fecha ya existe.
   /// Retorna el ID del registro insertado.
   Future<int> insertRegistro(RegistroModel registro) async {
 
     final db = await database;
 
-    return await db.insert('registros', registro.toMap());
+    return await db.insert(
+      'registros',
+      registro.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   /// Obtiene todos los registros ordenados por fecha descendente.

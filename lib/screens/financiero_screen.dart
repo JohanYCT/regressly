@@ -99,8 +99,8 @@ class _FinancieroScreenState extends State<FinancieroScreen> {
     // 📈 CÁLCULO DE PROYECCIÓN A 15 DÍAS (PRÓXIMA QUINCENA)
     // =========================================================================
     double litros15 = 0.0;
-    if (registrosOrdenados.length >= 2) {
-      // Si tenemos al menos 2 puntos de datos, aplicamos regresión lineal avanzada
+    if (registrosOrdenados.length >= 14) {
+      // Si tenemos al menos 14 días de datos, aplicamos regresión lineal avanzada
       final regRes = _analyticsService.calcularRegresion(registrosOrdenados);
       final predicciones = _analyticsService.calcularPredicciones(
         registrosOrdenados,
@@ -115,7 +115,7 @@ class _FinancieroScreenState extends State<FinancieroScreen> {
         litros15 += predicciones[i];
       }
     } else if (registrosOrdenados.isNotEmpty) {
-      // Fallback: Si solo hay 1 registro, usamos promedio simple proyectado a 15 días
+      // Si hay menos de 14 días, utilizamos el promedio diario real para una estimación quincenal conservadora y realista
       double promedio = totalLitros / registrosOrdenados.length;
       litros15 = promedio * 15;
     }
@@ -170,6 +170,53 @@ class _FinancieroScreenState extends State<FinancieroScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // =================================================================
+            // ⚠️ ADVERTENCIA: PRECIO POR LITRO NO CONFIGURADO ($0)
+            // =================================================================
+            if ((_finca?.precioLitro ?? 0) <= 0) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.amber.shade400, width: 1.5),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded, color: Colors.amber.shade900, size: 28),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Precio por litro no configurado',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Colors.amber.shade900,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Ingresa el precio del litro de leche en Configuración para calcular tus estimaciones en dinero.',
+                            style: TextStyle(fontSize: 12, color: Colors.black87),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/configuracion').then((_) => _cargarDatos());
+                      },
+                      child: const Text('Configurar'),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+
+            // =================================================================
             // 🐄 TARJETA 1: DATOS GENERALES DE LA FINCA Y PRECIO POR LITRO
             // =================================================================
             Container(
@@ -179,7 +226,7 @@ class _FinancieroScreenState extends State<FinancieroScreen> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -190,7 +237,7 @@ class _FinancieroScreenState extends State<FinancieroScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryGreen.withOpacity(0.1),
+                      color: AppTheme.primaryGreen.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.home_work, color: AppTheme.primaryGreen, size: 30),
@@ -231,7 +278,7 @@ class _FinancieroScreenState extends State<FinancieroScreen> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.primaryGreen.withOpacity(0.3),
+                    color: AppTheme.primaryGreen.withValues(alpha: 0.3),
                     blurRadius: 15,
                     offset: const Offset(0, 8),
                   ),
@@ -279,7 +326,7 @@ class _FinancieroScreenState extends State<FinancieroScreen> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.orange.withOpacity(0.3),
+                    color: Colors.orange.withValues(alpha: 0.3),
                     blurRadius: 15,
                     offset: const Offset(0, 8),
                   ),
